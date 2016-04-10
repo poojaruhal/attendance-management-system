@@ -13,22 +13,24 @@ def mark_attendance(request):
 
 	if rfid:
 
-		student = Student.objects.filter(rf_id=rfid).get()
-		
-		# Get the semester from the current data and time
-		semester = Semester.objects.filter(name="Second").get()
+		try:
+			student = Student.objects.filter(rf_id=rfid).get()
+			# Get the semester from the current data and time
+			semester = Semester.objects.filter(name="Second").get()
 
-		# Get the course from the current data and time and the reader_id
-		course = Course.objects.filter(name="VLSI Design").get()
+			# Get the course from the current data and time and the reader_id
+			course = Course.objects.filter(name="VLSI Design").get()
 
-		courseclass = CourseClass.objects.filter(course=course.pk,semester=semester.pk).get()
+			courseclass = CourseClass.objects.filter(course=course.pk,semester=semester.pk).get()
 
 
-		attendance = Attendance(course_class=courseclass,student=student)
-		attendance.save()
+			attendance = Attendance(course_class=courseclass,student=student)
+			attendance.save()
 
-		html = """<html><body>Marked Attendance for student {0} and course {1} .</body></html>""".format(student.user.username,courseclass.course.name)
-		
+			html = """<html><body>Marked Attendance for student {0} and course {1} .</body></html>""".format(student.user.username,courseclass.course.name)
+
+		except :
+			html = "Param error" 
 
 	else:
 
