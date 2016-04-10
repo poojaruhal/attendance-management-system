@@ -12,6 +12,7 @@ class Department(models.Model):
 class Student(models.Model):
 	user = models.OneToOneField(User)
 	student_id = models.CharField(max_length=100)
+	rf_id = models.CharField(max_length=100)
 	department = models.ForeignKey(Department)
 
 	mobile_number = models.CharField(max_length=10)
@@ -49,13 +50,13 @@ class Course(models.Model):
 	department = models.ForeignKey(Department)
 
 	def __unicode__(self):
-		return self.code + " " + self.code
+		return self.code + " " + self.name
 
 class Time(models.Model):
 	day = models.CharField(max_length=10)
 	hour = models.CharField(max_length=10)
 	def __unicode__(self):
-		return self.day + " " + hour
+		return self.day + " " + self.hour
 
 class Semester(models.Model):
 	name = models.CharField(max_length=10)
@@ -67,14 +68,17 @@ class Room(models.Model):
 	number = models.IntegerField()
 
 	def __unicode__(self):
-		return self.number
+		return str(self.number)
 
 class CourseClass(models.Model):
 	room = models.ForeignKey(Room)
 	semester = models.ForeignKey(Semester)
 	faculty = models.ForeignKey(Faculty)
 	time = models.ForeignKey(Time)
+	course = models.ForeignKey(Course,blank=True,default=1)
 
+	def __unicode__(self):
+		return self.course.name + " | " + self.semester.name + " Semester"
 
 class Attendance(models.Model):
 
