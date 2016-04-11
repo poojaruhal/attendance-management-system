@@ -3,12 +3,14 @@ from django.http import HttpResponse
 from basic.models import Student,Semester,Attendance,Course,CourseClass
 from basic.models import Faculty
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
 
 
 def index(request):
 
 	return render(request,'basic/welcome.html')
 
+@login_required(login_url='/login/')
 def faculty(request):
 
 	# Allowd only for faculties

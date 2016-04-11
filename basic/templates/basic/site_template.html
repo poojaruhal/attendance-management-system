@@ -48,7 +48,14 @@
             <li><a href="#contact">Contact</a></li>
           </ul>
           <ul class="nav navbar-nav navbar-right">
-            <li><a href="#">Account</a></li>            
+          	{% if request.user.is_authenticated %}
+          		{% if request.user.is_superuser %}
+            		<li><a href="{% url 'admin:index' %}">Admin</a></li>
+        		{% endif %}
+            	<li><a href="{% url 'django.contrib.auth.views.logout' %}?next=/">Logout</a></li>
+            {% else %}
+            	<li><a href="{% url 'django.contrib.auth.views.login' %}">Login</a></li>
+            {% endif %}
           </ul>
         </div><!--/.nav-collapse -->
       </div>
