@@ -1,0 +1,47 @@
+{% extends 'basic/site_template.html' %}
+{% block body %}
+
+<script src="http://code.highcharts.com/highcharts.js"></script>
+
+<div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+
+<div>
+	<p></p>
+</div>
+
+<script type="text/javascript">
+	$(function () {
+    $('#container').highcharts({
+        title: {
+            text: 'Course wise Attendance ',
+            x: -20 //center
+        },
+        // Static Data, populate list from graph
+        xAxis: {
+            categories: {{categories|safe}}
+        },
+        yAxis: {
+            title: {
+                text: 'Attendance (%)'
+            },
+            plotLines: [{
+                value: 0,
+                width: 1,
+                color: '#808080'
+            }]
+        },
+        tooltip: {
+            valueSuffix: '%'
+        },
+        legend: {
+            layout: 'vertical',
+            align: 'right',
+            verticalAlign: 'middle',
+            borderWidth: 0
+        },
+        series: {{series|safe}}
+    });
+});
+
+</script>
+{% endblock %}
