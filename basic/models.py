@@ -2,14 +2,21 @@ from django.db import models
 from django.contrib.auth.models import User
 # Create your models here.
 
-class Department(models.Model):
+class BaseModel(models.Model):
+	created_date = models.DateTimeField(auto_now_add=True)
+	modified_date = models.DateTimeField(auto_now=True)
+
+	class Meta:
+		abstract = True
+
+class Department(BaseModel):
 	name = models.CharField(max_length=100)
 	acronym = models.CharField(max_length=20)
 	
 	def __unicode__(self):
 		return self.name
 
-class Student(models.Model):
+class Student(BaseModel):
 	user = models.OneToOneField(User)
 	student_id = models.CharField(max_length=100)
 	rf_id = models.CharField(max_length=100)
@@ -22,20 +29,20 @@ class Student(models.Model):
 	def __unicode__(self):
 		return str(self.user)
 
-class Designation(models.Model):
+class Designation(BaseModel):
 	name = models.CharField(max_length=100)
 	acronym = models.CharField(max_length=20)
 	def __unicode__(self):
 		return self.name
 
-class Report(models.Model):
+class Report(BaseModel):
 	name = models.CharField(max_length=100)
 	query = models.TextField()
 
 	def __unicode__(self):
 		return self.name
 
-class Faculty(models.Model):
+class Faculty(BaseModel):
 	user = models.OneToOneField(User)
 	faculty_id = models.CharField(max_length=100)
 	department = models.ForeignKey(Department)
@@ -44,7 +51,7 @@ class Faculty(models.Model):
 	def __unicode__(self):
 		return str(self.user)
 
-class Course(models.Model):
+class Course(BaseModel):
 	name = models.CharField(max_length=100)
 	code = models.CharField(max_length=50)
 	department = models.ForeignKey(Department)
@@ -52,25 +59,25 @@ class Course(models.Model):
 	def __unicode__(self):
 		return self.code + " " + self.name
 
-class Time(models.Model):
+class Time(BaseModel):
 	day = models.CharField(max_length=10)
 	hour = models.CharField(max_length=10)
 	def __unicode__(self):
 		return self.day + " " + self.hour
 
-class Semester(models.Model):
+class Semester(BaseModel):
 	name = models.CharField(max_length=10)
 
 	def __unicode__(self):
 		return self.name
 
-class Room(models.Model):
+class Room(BaseModel):
 	number = models.IntegerField()
 
 	def __unicode__(self):
 		return str(self.number)
 
-class CourseClass(models.Model):
+class CourseClass(BaseModel):
 	room = models.ForeignKey(Room)
 	semester = models.ForeignKey(Semester)
 	faculty = models.ForeignKey(Faculty)
@@ -80,12 +87,12 @@ class CourseClass(models.Model):
 	def __unicode__(self):
 		return self.course.name + " | " + self.semester.name + " Semester"
 
-class Attendance(models.Model):
+class Attendance(BaseModel):
 
 	course_class = models.ForeignKey(CourseClass)
 	student = models.ForeignKey(Student)
 
-class MarkingUnit(models.Model):
+class MarkingUnit(BaseModel):
 
 	number = models.CharField(max_length=100)
 	room = models.ForeignKey(Room,blank=True)
