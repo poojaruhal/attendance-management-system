@@ -1,8 +1,11 @@
 from django.shortcuts import render
-from django.http import HttpResponse
-
+import datetime
+from django.http import HttpResponse,JsonResponse
+import time
+import json
 from .models import Faculty
-from .models import Student,Semester,Attendance,Course,CourseClass
+from enum import Enum
+from .models import Student,Semester,Attendance,Course,CourseClass,MarkingUnit,Time,Room
 
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
@@ -66,31 +69,88 @@ def faculty(request):
 
 	return render(request,'basic/course_list.html',context=context)
 
+# Create your views here.
+
+class CourseAttendanceCount:
+	course_name = ""
+	attendance_count = 0
+	student_id = ""
+	student_parentno=""
+	student_email=""
+
+	def to_dict(self):
+		return {"student_id":str(self.student_id), "course_name":str(self.course_name),"attendance_count":str(self.attendance_count) }
+
+	def _str_(self):
+		return self.student_id + " " + self.course_name + " " + self.attendance_count
+
+
+class SemesterNumber(Enum):
+	even = 1
+	odd = 2
+
+	def index(request):
+		return render(request, 'basic/index.html')
+
+
 @csrf_exempt
+
 def mark_attendance(request):
 
-	rfid = request.POST.get("rfid","")
+	#rfid = request.POST.get("rfid","")
+	rfid="226545398"
+	deviceID="5"
+	#time = request.POST.get("time", "")
+	#deviecID = request.POST.get("deviceID", "")
 
 	if rfid:
+		#time.struct_time(tm_year=2016, tm_mon=4, tm_mday=11, tm_hour=9, tm_min=20, tm_sec=21, tm_wday=0, tm_yday=102, tm_isdst=1)
 
-		try:
-			student = Student.objects.filter(rf_id=rfid).get()
-			# Get the semester from the current data and time
-			semester = Semester.objects.filter(name="Second").get()
+		#st1 = Student.objects.filter(rf_id=rfid)
+		#student1 = st1[0]
 
-			# Get the course from the current data and time and the reader_id
-			course = Course.objects.filter(name="VLSI Design").get()
+		st = Student.objects.get(rf_id=rfid)
+		#student=st[0]
 
-			courseclass = CourseClass.objects.filter(course=course.pk,semester=semester.pk).get()
+		localtime = time.localtime(time.time())
+		yr=localtime.tm_year
+		month=localtime.tm_mon
+		hr=localtime.tm_hour
+		print(hr)
+		semesterNumber=CheckEvenOdd(month)
+		# Get Semester
+		semester_d = Semester.objects.get(name=semesterNumber , year=yr)
+		time_d = Time.objects.get(day= GetDayName(localtime.tm_wday), hour = hr)
 
+		# Get time
 
-			attendance = Attendance(course_class=courseclass,student=student)
+		# Get room from device id posted
+		room_d=MarkingUnit.objects.get(number=deviceID).room
+		#room_d=Room.objects.get(number=room_marking_d.)
+		course_class_d=CourseClass.objects.filter(semester=semester_d.pk,time=time_d.pk,room=room_d).get();
+
+		courseAssinged=0
+		for cs in st.courseClass.all():
+			if(cs==course_class_d):
+				courseAssinged=1
+
+		if(course_class_d and courseAssinged):
+			attendance = Attendance(course_class=course_class_d, student=st)
 			attendance.save()
+			html = """<html><body>Marked Attendance for student {0} and course {1} .</body></html>""".format(st.user.username, course_class_d.course.name)
+		else:
+			html = """<html><body>student {0} is not regiestered for course {1} .</body></html>""".format(st.user.username, course_class_d.course.name)
 
-			html = """<html><body>Marked Attendance for student {0} and course {1} .</body></html>""".format(student.user.username,courseclass.course.name)
+		#course = Course.objects.filter(name="VLSI Design").get()
 
-		except :
-			html = "Param error" 
+		#courseclass = CourseClass.objects.filter(course=course.pk,semester=semester.pk).get()
+
+
+
+
+
+		
+
 
 	else:
 
@@ -98,30 +158,76 @@ def mark_attendance(request):
 	
 	return HttpResponse(html)
 
-class Course_attendance:
-	course_name=""
-	attendance_count=0
-	student_id=""
 
-	def __str__(self):
-		return self.student_id+" "+self.course_name+" "+self.attendance_count
+def CheckEvenOdd(month):
 
-def send_message(request):
-	students=Student.objects.all()
-	attendance_threshold=6
+	if(month==1 & month==2 & month==3 & month==4 & month==5 & month==6) :
+		return SemesterNumber.even.name
+	else :
+		return SemesterNumber.odd.name
+
+
+def GetDayName(dayNo) :
+	if(dayNo==0) :
+		return "monday"
+
+	if (dayNo == 1):
+		return "tuesday"
+
+	if (dayNo == 2):
+		return "wednesday"
+
+	if (dayNo == 3):
+		return "thursday"
+
+	if (dayNo == 4):
+		return "friday"
+
+	if (dayNo == 5):
+		return "saturday"
+
+	if (dayNo == 5):
+		return "sunday"
+
+
+
+def SendMessageForAllStudentInAllCourses(request):
+	StudentsCourseListToSendMesg=[]
+	students = Student.objects.all()
+	attendance_threshold = 1
 	for student in students:
-		attendence=Attendance.objects.filter(student=student.pk)
-		for course in student.CourseClass:
-			for course_att in attendence.CourseClass:
-				if(course==course_att):
-					course_attendance = Course_attendance()
-					course_attendance.course_name=course
-					course_attendance.attendance_count+=1
-					course_attendance.student_id=student
+		attendences = Attendance.objects.filter(student=student.pk)
+		for course_class in student.courseClass.all():
+			course_att_count = CourseAttendanceCount()
+			course_att_count.student_id=student.student_id
+			course_att_count.course_name = course_class.course.name
+			for att in attendences:
+				if (att.course_class == course_class):
+					course_att_count.attendance_count += 1
+			if (course_att_count.attendance_count < attendance_threshold):
+				course_att_count.student_parentno = student.parents_mobile_number
+				course_att_count.student_email = student.parents_email
 
-		if(course_attendance.attendance_count< attendance_threshold):
-					student_parentno=student.parents_mobile_number
-					student_email=student.parents_email
+				element = {
+					"student_id":str(course_att_count.student_id),
+					"course_name":str(course_att_count.course_name),
+					"attendance_count":str(course_att_count.attendance_count),
+					"student_parentno":str(course_att_count.student_parentno),
+					"student_email":str(course_att_count.student_email)
+				}
+
+				#StudentsCourseListToSendMesg.append(course_att_count)
+				StudentsCourseListToSendMesg.append(element)
+
+	#html = """<html><body>Marked Attendance for count {0} .</body></html>""".format(len(StudentsCourseListToSendMesg))
+	html = StudentsCourseListToSendMesg
+	return JsonResponse(html,safe=False)
 
 
+def SendMessageForStudent(request):
+	student_id = request.POST.get("student_id", "")
+
+
+def SendMessageForCourse(request):
+	course_id = request.POST.get("course_name", "")
 

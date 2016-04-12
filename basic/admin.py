@@ -1,6 +1,6 @@
 from django.contrib import admin
-import models
 from django.contrib.auth.models import User
+from basic import models
 
 class StudentAdmin(admin.ModelAdmin):
 
