@@ -1,10 +1,10 @@
 from django.contrib import admin
-from basic import models
+import models
 from django.contrib.auth.models import User
 
 class StudentAdmin(admin.ModelAdmin):
 
-	exclude = ('student_id',)
+	#exclude = ('student_id',)
 
 	def get_queryset(self, request):
 		qs = super(StudentAdmin, self).get_queryset(request)
@@ -13,7 +13,7 @@ class StudentAdmin(admin.ModelAdmin):
 		if request.user.groups.filter(name="Students").exists():
 			return qs.filter(user=request.user)
 		return qs
-			
+
 
 	def formfield_for_foreignkey(self, db_field, request, **kwargs):
 		"""Limit choices for 'user' field to only current user."""

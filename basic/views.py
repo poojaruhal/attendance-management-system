@@ -1,7 +1,9 @@
 from django.shortcuts import render
 from django.http import HttpResponse
-from basic.models import Student,Semester,Attendance,Course,CourseClass
-from basic.models import Faculty
+
+from .models import Faculty
+from .models import Student,Semester,Attendance,Course,CourseClass
+
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 
@@ -84,3 +86,31 @@ def mark_attendance(request):
 		html = "<html><body>%s.</body></html>" % "No id passed"
 	
 	return HttpResponse(html)
+
+class Course_attendance:
+	course_name=""
+	attendance_count=0
+	student_id=""
+
+	def __str__(self):
+		return self.student_id+" "+self.course_name+" "+self.attendance_count
+
+def send_message(request):
+	students=Student.objects.all()
+	attendance_threshold=6
+	for student in students:
+		attendence=Attendance.objects.filter(student=student.pk)
+		for course in student.CourseClass:
+			for course_att in attendence.CourseClass:
+				if(course==course_att):
+					course_attendance = Course_attendance()
+					course_attendance.course_name=course
+					course_attendance.attendance_count+=1
+					course_attendance.student_id=student
+
+		if(course_attendance.attendance_count< attendance_threshold):
+					student_parentno=student.parents_mobile_number
+					student_email=student.parents_email
+
+
+

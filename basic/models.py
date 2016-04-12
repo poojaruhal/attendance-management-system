@@ -1,5 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
+from datetime import datetime
+
+
 # Create your models here.
 
 class BaseModel(models.Model):
@@ -15,19 +18,6 @@ class Department(BaseModel):
 	
 	def __unicode__(self):
 		return self.name
-
-class Student(BaseModel):
-	user = models.OneToOneField(User)
-	student_id = models.CharField(max_length=100)
-	rf_id = models.CharField(max_length=100)
-	department = models.ForeignKey(Department)
-
-	mobile_number = models.CharField(max_length=10)
-	parents_mobile_number = models.CharField(max_length=10)
-	parents_email = models.CharField(max_length=100)
-	
-	def __unicode__(self):
-		return str(self.user)
 
 class Designation(BaseModel):
 	name = models.CharField(max_length=100)
@@ -67,6 +57,8 @@ class Time(BaseModel):
 
 class Semester(BaseModel):
 	name = models.CharField(max_length=10)
+	start_time =models.CharField(max_length=20,default='2009-01-05 22:14:39')
+	end_time  =models.CharField(max_length=20,default='2009-01-05 22:14:39')
 
 	def __unicode__(self):
 		return self.name
@@ -87,8 +79,20 @@ class CourseClass(BaseModel):
 	def __unicode__(self):
 		return self.course.name + " | " + self.semester.name + " Semester"
 
-class Attendance(BaseModel):
+class Student(BaseModel):
+	user = models.OneToOneField(User)
+	student_id = models.CharField(max_length=100)
+	rf_id = models.CharField(max_length=100)
+	department = models.ForeignKey(Department)
+	course_class = models.ManyToManyField(CourseClass)
+	mobile_number = models.CharField(max_length=10)
+	parents_mobile_number = models.CharField(max_length=10)
+	parents_email = models.CharField(max_length=100)
 
+	def __unicode__(self):
+		return str(self.user)
+
+class Attendance(BaseModel):
 	course_class = models.ForeignKey(CourseClass)
 	student = models.ForeignKey(Student)
 
