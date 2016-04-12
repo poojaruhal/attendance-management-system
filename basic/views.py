@@ -11,11 +11,23 @@ from django.contrib.auth.decorators import login_required
 def index(request):
 
 	return render(request,'basic/welcome.html')
+@login_required(login_url='/login/')
+def student(request):
+
+	student = Student.objects.filter(user=request.user)
+
+	if not student:
+		# Logged in user is not a student
+		return render(request,'basic/permission_error.html')
+
+	student = student.get()
+
+	return render(request,'basic/student_course_wise_attendance.html')
 
 @login_required(login_url='/login/')
 def faculty(request):
 
-	# Allowd only for faculties
+	# Allowed only for faculties
 
 	faculty = Faculty.objects.filter(user=request.user)
 	
@@ -51,7 +63,6 @@ def faculty(request):
 	series.append({'name':'VLSI Design','data':attendance['vlsi']})
 
 	context = {'categories':categories,'series':series}
-
 
 	return render(request,'basic/course_list.html',context=context)
 
