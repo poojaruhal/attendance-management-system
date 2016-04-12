@@ -97,11 +97,11 @@ class SemesterNumber(Enum):
 
 def mark_attendance(request):
 
-	#rfid = request.POST.get("rfid","")
-	rfid="226545398"
-	deviceID="5"
+	rfid = request.POST.get("rfid","")
+	#rfid="226545398"
+	#deviceID="5"
 	#time = request.POST.get("time", "")
-	#deviecID = request.POST.get("deviceID", "")
+	deviecID = request.POST.get("deviceID", "")
 
 	if rfid:
 		#time.struct_time(tm_year=2016, tm_mon=4, tm_mday=11, tm_hour=9, tm_min=20, tm_sec=21, tm_wday=0, tm_yday=102, tm_isdst=1)
@@ -162,9 +162,9 @@ def mark_attendance(request):
 def CheckEvenOdd(month):
 
 	if(month==1 & month==2 & month==3 & month==4 & month==5 & month==6) :
-		return SemesterNumber.even.name
-	else :
 		return SemesterNumber.odd.name
+	else :
+		return SemesterNumber.even.name
 
 
 def GetDayName(dayNo) :

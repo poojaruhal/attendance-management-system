@@ -58,7 +58,7 @@ class Time(BaseModel):
 
 class Semester(BaseModel):
 	name = models.CharField(max_length=10)
-
+	year = models.CharField(max_length=4)
 	start_time =models.CharField(max_length=20,default='2009-01-05 22:14:39')
 	end_time  =models.CharField(max_length=20,default='2009-01-05 22:14:39')
 
