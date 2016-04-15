@@ -48,3 +48,4 @@ admin.site.register(models.Attendance)
 
 admin.site.register(models.MarkingUnit)
 admin.site.register(models.Report)
+

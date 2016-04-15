@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'djrill',
+    'chartjs'
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -100,7 +102,8 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
-
+EMAIL_BACKEND = "djrill.mail.backends.djrill.DjrillBackend"
+MANDRILL_API_KEY = "zfbFI3teZNzqpPDbScH0Jg"
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.9/topics/i18n/

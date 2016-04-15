@@ -59,8 +59,10 @@ class Time(BaseModel):
 class Semester(BaseModel):
 	name = models.CharField(max_length=10)
 	year = models.CharField(max_length=4)
-	start_time =models.CharField(max_length=20,default='2009-01-05 22:14:39')
-	end_time  =models.CharField(max_length=20,default='2009-01-05 22:14:39')
+	#start_time =models.DateTimeField(auto_now_add=True)
+	start_time = models.DateTimeField(default=datetime.now, blank=True)
+	end_time = models.DateTimeField(default=datetime.now, blank=True)
+	#end_time  =models.CharField(max_length=20,default='2009-01-05 22:14:39')
 
 	def __str__(self):
 		return self.name + self.year
@@ -106,3 +108,4 @@ class MarkingUnit(BaseModel):
 
 	def __str__(self):
 		return self.number
+

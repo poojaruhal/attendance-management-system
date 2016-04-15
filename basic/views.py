@@ -2,6 +2,7 @@ from django.shortcuts import render
 import datetime
 from django.http import HttpResponse,JsonResponse
 import time
+import math
 import json
 from .models import Faculty
 from enum import Enum
@@ -9,11 +10,18 @@ from .models import Student,Semester,Attendance,Course,CourseClass,MarkingUnit,T
 
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
+from django.core.mail import EmailMultiAlternatives
+
+from random import randint
+from django.views.generic import TemplateView
+from chartjs.views.lines import BaseLineChartView
+from itertools import islice
+from chartjs.colors import next_color, COLORS
 
 
 def index(request):
-
 	return render(request,'basic/welcome.html')
+
 @login_required(login_url='/login/')
 def student(request):
 
@@ -77,6 +85,7 @@ class CourseAttendanceCount:
 	student_id = ""
 	student_parentno=""
 	student_email=""
+	student_name="Student"
 
 	def to_dict(self):
 		return {"student_id":str(self.student_id), "course_name":str(self.course_name),"attendance_count":str(self.attendance_count) }
@@ -125,7 +134,7 @@ def mark_attendance(request):
 		# Get time
 
 		# Get room from device id posted
-		room_d=MarkingUnit.objects.get(number=deviceID).room
+		room_d=MarkingUnit.objects.get(number=deviecID).room
 		#room_d=Room.objects.get(number=room_marking_d.)
 		course_class_d=CourseClass.objects.filter(semester=semester_d.pk,time=time_d.pk,room=room_d).get();
 
@@ -137,9 +146,9 @@ def mark_attendance(request):
 		if(course_class_d and courseAssinged):
 			attendance = Attendance(course_class=course_class_d, student=st)
 			attendance.save()
-			html = """<html><body>Marked Attendance for student {0} and course {1} .</body></html>""".format(st.user.username, course_class_d.course.name)
+			html = """student {0} & course {1}""".format(st.user.username, course_class_d.course.name)
 		else:
-			html = """<html><body>student {0} is not regiestered for course {1} .</body></html>""".format(st.user.username, course_class_d.course.name)
+			html = """Not regiestered"""
 
 		#course = Course.objects.filter(name="VLSI Design").get()
 
@@ -154,7 +163,7 @@ def mark_attendance(request):
 
 	else:
 
-		html = "<html><body>%s.</body></html>" % "No id passed"
+		html = "No id passed"
 	
 	return HttpResponse(html)
 
@@ -189,12 +198,31 @@ def GetDayName(dayNo) :
 	if (dayNo == 5):
 		return "sunday"
 
+def CalculateThreshold():
+	localtime = time.localtime(time.time())
+	yr = localtime.tm_year
+	month = localtime.tm_mon
+	semesterNumber = CheckEvenOdd(month)
+	# Get Semester
+	semester_d = Semester.objects.get(name=semesterNumber, year=yr)
+	startTime=semester_d.start_time
+	#print(startTime.date())
+	#print(datetime.date.today())
+
+	#d1 = datetime.strptime(startTime, "%Y-%m-%d")
+	#d2 = datetime.strptime(datetime.date.today(), "%Y-%m-%d")
+
+	noOfDays=(abs((startTime.date() - datetime.date.today()).days))
+	weeks=noOfDays/7
+	remainingDays=noOfDays%7
+	classes=weeks*3 + remainingDays/2
+	return ((classes*40)/100)
 
 
 def SendMessageForAllStudentInAllCourses(request):
 	StudentsCourseListToSendMesg=[]
 	students = Student.objects.all()
-	attendance_threshold = 1
+	attendance_threshold = CalculateThreshold()
 	for student in students:
 		attendences = Attendance.objects.filter(student=student.pk)
 		for course_class in student.courseClass.all():
@@ -207,8 +235,10 @@ def SendMessageForAllStudentInAllCourses(request):
 			if (course_att_count.attendance_count < attendance_threshold):
 				course_att_count.student_parentno = student.parents_mobile_number
 				course_att_count.student_email = student.parents_email
+				course_att_count.student_name = student.user.username
 
 				element = {
+					"student_name": str(course_att_count.student_name),
 					"student_id":str(course_att_count.student_id),
 					"course_name":str(course_att_count.course_name),
 					"attendance_count":str(course_att_count.attendance_count),
@@ -221,6 +251,17 @@ def SendMessageForAllStudentInAllCourses(request):
 
 	#html = """<html><body>Marked Attendance for count {0} .</body></html>""".format(len(StudentsCourseListToSendMesg))
 	html = StudentsCourseListToSendMesg
+	Emails=[]
+	if len(StudentsCourseListToSendMesg)>0:
+		for stud in StudentsCourseListToSendMesg :
+			#Emails.append(stud["student_email"])
+			email_body = "Hello " + stud["student_name"] + "\n" + "You have low attendance in\n" + "Subject Name: "+stud["course_name"]+ "\n" + "Your attendance: "+ str(stud["attendance_count"])+ "\n"+"Minimum required (Upto today): "+ str(math.ceil(attendance_threshold))+ "\n"
+			email_subject="Attendance Report - "+stud["course_name"]
+			msg = EmailMultiAlternatives(subject=str(email_subject), body=str(email_body),
+									 from_email="hello@naveenjaiswal.co",
+									 to=[stud["student_email"]])
+			msg.send()
+			response = msg.mandrill_response[0]
 	return JsonResponse(html,safe=False)
 
 
@@ -230,4 +271,48 @@ def SendMessageForStudent(request):
 
 def SendMessageForCourse(request):
 	course_id = request.POST.get("course_name", "")
+
+'''
+def SendEmail11(request):
+	send_mail('Put your Email subject here', 'Put your Email message here.', 'digvijaysingh073@gmail.com',['poojaruhal65@gmail.com'], fail_silently=False)
+	html = """<html><body>Marked Attendance for count {0} .</body></html>""".format("done")
+	return HttpResponse(html)
+'''
+
+def SendEmail(request):
+	Emails = []
+	Emails.append("h2015184@pilani.bits-pilani.ac.in")
+	Emails.append("h2015171@pilani.bits-pilani.ac.in")
+	msg = EmailMultiAlternatives(subject="Low attendance report", body="test body",
+								 from_email="hello@naveenjaiswal.co",
+								 to=Emails)
+	msg.send()
+	response = msg.mandrill_response[0]
+	return HttpResponse(response)
+
+class ColorsView(TemplateView):
+    template_name = 'basic/colors.html'
+
+    def get_context_data(self, **kwargs):
+        data = super(ColorsView, self).get_context_data(**kwargs)
+        data['colors'] = islice(next_color(), 0, 50)
+        return data
+
+class LineChartJSONView(BaseLineChartView):
+	#template_name = 'templates/basic/line_chart.html'
+    def get_labels(self):
+        """Return 7 labels."""
+        return ["January", "February", "March", "April", "May", "June", "July"]
+
+    def get_data(self):
+        """Return 3 dataset to plot."""
+
+        return [[75, 44, 92, 11, 44, 95, 35],
+                [41, 92, 18, 3, 73, 87, 92],
+                [87, 21, 94, 3, 90, 13, 65]]
+
+
+line_chart = TemplateView.as_view(template_name='basic/line_chart.html')
+line_chart_json = LineChartJSONView.as_view()
+colors = ColorsView.as_view()
 
