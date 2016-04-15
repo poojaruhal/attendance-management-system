@@ -49,66 +49,83 @@ def student(request):
 	return render(request,'basic/student_course_wise_attendance.html')
 
 @login_required(login_url='/login/')
-def faculty(request):
-
-	default_select = "Choose Subject"
+def report(request):
 	
+	default_select = "Choose Subject"	
 	subject = request.GET.get("subject",default=default_select) 
 
+	request_faculty = Faculty.objects.filter(user=request.user)	
 
-	f = Faculty.objects.filter(user=request.user)
-	
-	if f:
-	
-		f = f.get()
+	request_student = Student.objects.filter(user=request.user)
 
-		course_list = []
+	if request_faculty:
 		
-		courses = CourseClass.objects.filter(faculty=f)
+		request_faculty = request_faculty.get()
+		courses = CourseClass.objects.filter(faculty=request_faculty)
 
-		for c in courses:
-			course_list.append(c.course)
+	elif request_student:
 
-		context = {'courses':course_list,'subject':subject}
+		request_student = request_student.get()
+		courses = request_student.courseClass.all()
 
-		# User has selected a course to view report
-		if subject != default_select:
-			# Generate report for the selected course
-			# Report needs :
-			#  - current semester
-			#  - current faculty
-			#  - selected course
+	course_list = []
 
-			# TODO Move to a function
-			localtime = time.localtime(time.time())
-			yr=localtime.tm_year
-			month=localtime.tm_mon
-			hr=localtime.tm_hour			
-			semesterNumber=CheckEvenOdd(month)
+	for c in courses:
+		course_list.append(c.course)
+
+	context = {'courses':course_list,'subject':subject}
+
+	# User has selected a course to view report
+	if subject != default_select:
+		# Generate report for the selected course
+		# Report needs :
+		#  - current semester
+		#  - current faculty
+		#  - selected course
+
+		# TODO Move to a function
+		localtime = time.localtime(time.time())
+		yr=localtime.tm_year
+		month=localtime.tm_mon
+		hr=localtime.tm_hour			
+		semesterNumber=CheckEvenOdd(month)
+		
+		if semesterNumber == SemesterNumber.odd:
+			semesterNumber = "odd"
+		elif semesterNumber == SemesterNumber.even:
+			semesterNumber = "even"
+
+		# Get Semester
+		semester = Semester.objects.filter(name=semesterNumber , year=yr)
 			
-			if semesterNumber == SemesterNumber.odd:
-				semesterNumber = "odd"
-			elif semesterNumber == SemesterNumber.even:
-				semesterNumber = "even"
+		# Selected Course
+		course = Course.objects.filter(name=subject).get()
 
-			# Get Semester
-			semester = Semester.objects.filter(name=semesterNumber , year=yr)
-			
-			# Selected Course
-			course = Course.objects.filter(name=subject).get()
 
-			courseclass = CourseClass.objects.filter(semester=semester,course=course,faculty=f)
+		if request_faculty:
 
-			#attendances = Attendance.objects.filter(course_class=courseclass).annotate(num_books=Count('student'))
-			# Group By Date Hour to compute attendance per class
-		 	attendances = Attendance.objects.filter(course_class=courseclass)\
-		 		.extra({'date':"strftime('%%d-%%m %%H', created_date)"})\
-		 		.values('course_class','date')\
-		 		.annotate(count=Count('student'))
+			courseclass = CourseClass.objects.filter(semester=semester,course=course,faculty=request_faculty)
 
-		 	categories = []
-		 	series = {'name':str(subject),'data':[]}
-	 		
+			attendances = Attendance.objects.filter(course_class=courseclass)\
+	 		.extra({'date':"strftime('%%d-%%m %%H', created_date)"})\
+	 		.values('course_class','date')\
+	 		.annotate(count=Count('student'))
+
+		elif request_student:
+
+			courseclass = CourseClass.objects.filter(semester=semester,course=course)
+			attendances = Attendance.objects.filter(course_class=courseclass,student=request_student)\
+	 		.extra(select={'date': 'created_date'})\
+	 		.values('course_class','date')\
+	 		.annotate(count=Count('created_date'))
+
+		#attendances = Attendance.objects.filter(course_class=courseclass).annotate(num_books=Count('student'))
+		# Group By Date Hour to compute attendance per class
+	 	
+	 	categories = []
+	 	series = {'name':str(subject),'data':[]}
+		if request_faculty:
+
 	 		for row in attendances:
 	 			categories.append(str(row['date']))
 	 			series['data'].append(row['count'])
@@ -117,13 +134,8 @@ def faculty(request):
 	 		context['categories'] = categories
 	 		context['series'] = [series]
 
-			context['classes'] = courseclass
-			context['attendance'] = attendances
-
-
-
-		
-
+		context['classes'] = courseclass
+		context['attendance'] = attendances
 
 	return render(request,'basic/course_list.html',context=context)
 
