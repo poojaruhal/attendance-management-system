@@ -19,7 +19,7 @@ class Department(BaseModel):
 	def __str__(self):
 		return self.name
 
-class Course(models.Model):
+class Course(BaseModel):
 	name = models.CharField(max_length=100)
 	code = models.CharField(max_length=50)
 	department = models.ForeignKey(Department)

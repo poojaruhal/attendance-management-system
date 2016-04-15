@@ -9,8 +9,8 @@ django.setup()
 
 from django.contrib.auth.models import User
 
-from basic.models import Faculty,Student,Department
-from basic.models import Designation,Semester,Room, Time
+from basic.models import Faculty,Student,Department,Course,CourseClass
+from basic.models import Designation,Semester,Room, Time,Attendance
 
 """
 Departments
@@ -153,11 +153,55 @@ def create_students():
 
 ###############################################################
 
-def crete_course():
+def create_course():
 	
 	courses = [
-		["CSIS","Software Architechture",""]
+		["CSIS","Software Architechture","CSGS213"],
+		["CSIS","Cloud Computing","CSGS215"],
+		["EEE","VLSI Design","EEGS213"],
 	]
+
+	rahul = User.objects.filter(username="rahulbanerjee").get()
+	ashish = User.objects.filter(username="ashishmishra").get()
+
+	f1 = Faculty.objects.filter(user=rahul).get()
+	f2 = Faculty.objects.filter(user=ashish).get()
+
+	semester = Semester.objects.filter(year="2016",name="even").get()
+	
+	time_1 = Time.objects.filter(day="monday",hour="18").get()
+	time_2 = Time.objects.filter(day="tuesday",hour="20").get()
+
+	room = Room.objects.filter(number="6157").get()
+
+	for course in courses:
+		d = Department.objects.filter(acronym=course[0]).get()
+		c = Course(name=course[1],department=d,code=course[2])
+		c.save()
+
+		if course[0] == "CSIS":
+			f = f1
+			t = time_1
+		else:
+			f = f2
+			t = time_2
+
+		class_1 = CourseClass(room=room,faculty=f,semester=semester,time=t,course=c)
+		class_1.save()
+
+def create_attendance():
+
+	course_class = CourseClass.objects.all()
+
+	students = Student.objects.all()
+
+	for i in range(1,5):
+		for course in course_class:
+			for student in students:
+				Attendance(course_class=course,student=student).save()
+
+
+
 
 
 """
@@ -175,6 +219,17 @@ curl \
 
 """
 if __name__ == '__main__':
+	# create_departments()
+	# create_designations()
+	# create_semesters()
+	# create_time()
+	# create_rooms()
+	# create_faculties()
+	# create_students()
+	# create_course()
+	create_attendance()
+
+	"""
 	print "\
 	 1. Department \n \
 	 2. Designation \n \
@@ -201,6 +256,11 @@ if __name__ == '__main__':
 			
 			if int(key) >= int(step):
 				print "Execute "+value
-				locals()[value]()()
+				try:
+					globals()[value]()()
+				except TypeError:
+					print value
+					
 			else:
 				print "Skipped "+value
+	"""

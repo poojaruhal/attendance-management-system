@@ -17,6 +17,19 @@ from django.views.generic import TemplateView
 from chartjs.views.lines import BaseLineChartView
 from itertools import islice
 from chartjs.colors import next_color, COLORS
+from django.db.models import Count
+
+class SemesterNumber(Enum):
+	even = 1
+	odd = 2
+
+
+def CheckEvenOdd(month):
+
+	if(month==1 & month==2 & month==3 & month==4 & month==5 & month==6) :
+		return SemesterNumber.odd
+	else :
+		return SemesterNumber.even
 
 
 def index(request):
@@ -38,42 +51,79 @@ def student(request):
 @login_required(login_url='/login/')
 def faculty(request):
 
-	# Allowed only for faculties
-
-	faculty = Faculty.objects.filter(user=request.user)
+	default_select = "Choose Subject"
 	
-	if not faculty:
-		# Logged in user is not a faculty
-		return render(request,'basic/permission_error.html')
+	subject = request.GET.get("subject",default=default_select) 
 
-	faculty = faculty.get()
 
-	# Courses taught by current logged in user
-
-	courses = CourseClass.objects.filter(faculty=faculty)
-
-	if not courses:
-		# Current faculty doesn't teach any course
-		return render(request,'basic/no_course.html')	
-
-	# X- Axis
-	categories = []
-
-	for i in range(1,11):
-		categories.append('Week '+str(i))
-
-	# Series Data
+	f = Faculty.objects.filter(user=request.user)
 	
-	attendance = {}
-	attendance['ses'] = [1,2,3,4,5,6,7,8,9,10,11]
-	attendance['vlsi'] = [11,10,9,8,7,6,5,4,3,2,1]
+	if f:
+	
+		f = f.get()
 
-	series = []
+		course_list = []
+		
+		courses = CourseClass.objects.filter(faculty=f)
 
-	series.append({'name':'SES','data':attendance['ses']})
-	series.append({'name':'VLSI Design','data':attendance['vlsi']})
+		for c in courses:
+			course_list.append(c.course)
 
-	context = {'categories':categories,'series':series}
+		context = {'courses':course_list,'subject':subject}
+
+		# User has selected a course to view report
+		if subject != default_select:
+			# Generate report for the selected course
+			# Report needs :
+			#  - current semester
+			#  - current faculty
+			#  - selected course
+
+			# TODO Move to a function
+			localtime = time.localtime(time.time())
+			yr=localtime.tm_year
+			month=localtime.tm_mon
+			hr=localtime.tm_hour			
+			semesterNumber=CheckEvenOdd(month)
+			
+			if semesterNumber == SemesterNumber.odd:
+				semesterNumber = "odd"
+			elif semesterNumber == SemesterNumber.even:
+				semesterNumber = "even"
+
+			# Get Semester
+			semester = Semester.objects.filter(name=semesterNumber , year=yr)
+			
+			# Selected Course
+			course = Course.objects.filter(name=subject).get()
+
+			courseclass = CourseClass.objects.filter(semester=semester,course=course,faculty=f)
+
+			#attendances = Attendance.objects.filter(course_class=courseclass).annotate(num_books=Count('student'))
+			# Group By Date Hour to compute attendance per class
+		 	attendances = Attendance.objects.filter(course_class=courseclass)\
+		 		.extra({'date':"strftime('%%d-%%m %%H', created_date)"})\
+		 		.values('course_class','date')\
+		 		.annotate(count=Count('student'))
+
+		 	categories = []
+		 	series = {'name':str(subject),'data':[]}
+	 		
+	 		for row in attendances:
+	 			categories.append(str(row['date']))
+	 			series['data'].append(row['count'])
+
+	 		# Graph data
+	 		context['categories'] = categories
+	 		context['series'] = [series]
+
+			context['classes'] = courseclass
+			context['attendance'] = attendances
+
+
+
+		
+
 
 	return render(request,'basic/course_list.html',context=context)
 
@@ -92,14 +142,6 @@ class CourseAttendanceCount:
 
 	def _str_(self):
 		return self.student_id + " " + self.course_name + " " + self.attendance_count
-
-
-class SemesterNumber(Enum):
-	even = 1
-	odd = 2
-
-	def index(request):
-		return render(request, 'basic/index.html')
 
 
 @csrf_exempt
@@ -154,26 +196,11 @@ def mark_attendance(request):
 
 		#courseclass = CourseClass.objects.filter(course=course.pk,semester=semester.pk).get()
 
-
-
-
-
-		
-
-
 	else:
 
 		html = "No id passed"
 	
 	return HttpResponse(html)
-
-
-def CheckEvenOdd(month):
-
-	if(month==1 & month==2 & month==3 & month==4 & month==5 & month==6) :
-		return SemesterNumber.odd.name
-	else :
-		return SemesterNumber.even.name
 
 
 def GetDayName(dayNo) :
