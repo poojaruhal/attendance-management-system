@@ -57,87 +57,88 @@ def report(request):
 	request_faculty = Faculty.objects.filter(user=request.user)	
 
 	request_student = Student.objects.filter(user=request.user)
-
+	
+	context = {}
+	
 	if request_faculty:
 		
 		request_faculty = request_faculty.get()
 		courses = CourseClass.objects.filter(faculty=request_faculty)
-
-	elif request_student:
-
-		request_student = request_student.get()
-		courses = request_student.courseClass.all()
-
-	course_list = []
-
-	for c in courses:
-		course_list.append(c.course)
-
-	context = {'courses':course_list,'subject':subject}
-
-	# User has selected a course to view report
-	if subject != default_select:
-		# Generate report for the selected course
-		# Report needs :
-		#  - current semester
-		#  - current faculty
-		#  - selected course
-
-		# TODO Move to a function
-		localtime = time.localtime(time.time())
-		yr=localtime.tm_year
-		month=localtime.tm_mon
-		hr=localtime.tm_hour			
-		semesterNumber=CheckEvenOdd(month)
 		
-		if semesterNumber == SemesterNumber.odd:
-			semesterNumber = "odd"
-		elif semesterNumber == SemesterNumber.even:
-			semesterNumber = "even"
+		course_list = []
 
-		# Get Semester
-		semester = Semester.objects.filter(name=semesterNumber , year=yr)
+		for c in courses:
+			course_list.append(c.course)
+
+		context = {'courses':course_list,'subject':subject}
+		# User has selected a course to view report
+		if subject != default_select:
+			# Generate report for the selected course
+			# Report needs :
+			#  - current semester
+			#  - current faculty
+			#  - selected course
+
+			# TODO Move to a function
+			localtime = time.localtime(time.time())
+			yr=localtime.tm_year
+			month=localtime.tm_mon
+			hr=localtime.tm_hour			
+			semesterNumber=CheckEvenOdd(month)
 			
-		# Selected Course
-		course = Course.objects.filter(name=subject).get()
+			if semesterNumber == SemesterNumber.odd:
+				semesterNumber = "odd"
+			elif semesterNumber == SemesterNumber.even:
+				semesterNumber = "even"
+
+			# Get Semester
+			semester = Semester.objects.filter(name=semesterNumber , year=yr)
+				
+			# Selected Course
+			course = Course.objects.filter(name=subject).get()
 
 
-		if request_faculty:
+			# Group By Date Hour to compute attendance per class
 
 			courseclass = CourseClass.objects.filter(semester=semester,course=course,faculty=request_faculty)
-
 			attendances = Attendance.objects.filter(course_class=courseclass)\
-	 		.extra({'date':"strftime('%%d-%%m %%H', created_date)"})\
-	 		.values('course_class','date')\
-	 		.annotate(count=Count('student'))
+		 		.extra({'date':"strftime('%%d-%%m %%H', created_date)"})\
+		 		.values('course_class','date')\
+		 		.annotate(count=Count('student'))			
+		 	
+		 	categories = []
 
-		elif request_student:
+	 		# Graph data
 
-			courseclass = CourseClass.objects.filter(semester=semester,course=course)
-			attendances = Attendance.objects.filter(course_class=courseclass,student=request_student)\
-	 		.extra(select={'date': 'created_date'})\
-	 		.values('course_class','date')\
-	 		.annotate(count=Count('created_date'))
-
-		#attendances = Attendance.objects.filter(course_class=courseclass).annotate(num_books=Count('student'))
-		# Group By Date Hour to compute attendance per class
-	 	
-	 	categories = []
-	 	series = {'name':str(subject),'data':[]}
-		if request_faculty:
+		 	series = {'name':str(subject),'data':[]}			
 
 	 		for row in attendances:
 	 			categories.append(str(row['date']))
 	 			series['data'].append(row['count'])
 
-	 		# Graph data
 	 		context['categories'] = categories
 	 		context['series'] = [series]
 
-		context['classes'] = courseclass
-		context['attendance'] = attendances
+	 		# Graph data ends
 
-	return render(request,'basic/course_list.html',context=context)
+			context['classes'] = courseclass
+			context['attendance'] = attendances
+
+		return render(request,'basic/faculty_report.html',context=context)
+
+	elif request_student:
+
+		request_student = request_student.get()
+
+		attendances = Attendance.objects\
+				.values('course_class__course__name')\
+				.filter(student=request_student,course_class__in=request_student.courseClass.all()).annotate(dcount=Count('course_class__course__name'))
+
+		context['attendance'] = attendances
+		context['total_classes'] = int(getTotalClasses())
+		return render(request,'basic/student_report.html',context=context)
+
+	
 
 # Create your views here.
 
@@ -237,12 +238,18 @@ def GetDayName(dayNo) :
 	if (dayNo == 5):
 		return "sunday"
 
-def CalculateThreshold():
+def getTotalClasses():
 	localtime = time.localtime(time.time())
 	yr = localtime.tm_year
 	month = localtime.tm_mon
 	semesterNumber = CheckEvenOdd(month)
+	
 	# Get Semester
+	if semesterNumber == SemesterNumber.odd:
+		semesterNumber = "odd"
+	elif semesterNumber == SemesterNumber.even:
+		semesterNumber = "even"
+
 	semester_d = Semester.objects.get(name=semesterNumber, year=yr)
 	startTime=semester_d.start_time
 	#print(startTime.date())
@@ -255,6 +262,10 @@ def CalculateThreshold():
 	weeks=noOfDays/7
 	remainingDays=noOfDays%7
 	classes=weeks*3 + remainingDays/2
+	return classes
+
+def CalculateThreshold():
+	classes = getTotalClasses()
 	return ((classes*40)/100)
 
 
