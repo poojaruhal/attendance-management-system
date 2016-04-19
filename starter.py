@@ -219,14 +219,14 @@ curl \
 
 """
 if __name__ == '__main__':
-	# create_departments()
-	# create_designations()
-	# create_semesters()
-	# create_time()
-	# create_rooms()
-	# create_faculties()
-	# create_students()
-	# create_course()
+	create_departments()
+	create_designations()
+	create_semesters()
+	create_time()
+	create_rooms()
+	create_faculties()
+	create_students()
+	create_course()
 	create_attendance()
 
 	"""

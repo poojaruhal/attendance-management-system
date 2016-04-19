@@ -25,7 +25,7 @@ SECRET_KEY = 'u)(&y+op*=r5i8y7fc0$#fcelvb6+vj^y!)oj(gsz^43zof7#t'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -37,9 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'djrill',
-    'chartjs'
+    'django.contrib.staticfiles',   
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -110,7 +108,7 @@ MANDRILL_API_KEY = "zfbFI3teZNzqpPDbScH0Jg"
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
